@@ -1,0 +1,88 @@
+[gd_scene load_steps=7 format=2]
+
+[ext_resource path="res://Vortex/bang_01.png" type="Texture" id=1]
+[ext_resource path="res://Vortex/dotted_line.png" type="Texture" id=2]
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+
+uniform float intensity : hint_range(0, 20);
+uniform float mask : hint_range(0.0, 1.0, 0.01);
+uniform float offset : hint_range(0.0, 2.0, 0.01);
+
+float distFromCen(vec2 p) {
+	return distance(p, vec2(0.5));
+}
+//rotates by angle radians
+vec2 rotate(vec2 p, float angle){
+	return vec2(cos(angle)*p.x-sin(angle)*p.y, sin(angle)*p.x + cos(angle)*p.y);
+	}
+
+void fragment() {
+	float distMod = distFromCen(UV);
+	float angle = intensity * distMod;
+	vec2 newp = rotate(UV-vec2(0.5), angle) + vec2(0.5);
+	float a = abs((newp.x-0.5)*2.0);
+	newp.x = fract(a+offset*TIME);
+	
+	COLOR = texture(TEXTURE, newp);
+	float mask_tex = step(distMod,mask);
+	COLOR.a = COLOR.a * mask_tex;
+}"
+
+[sub_resource type="ShaderMaterial" id=2]
+shader = SubResource( 1 )
+shader_param/intensity = 0.0
+shader_param/mask = 1.0
+shader_param/offset = 0.41
+
+[sub_resource type="Shader" id=3]
+code = "shader_type canvas_item;
+
+uniform float offset : hint_range(0.0, 20.0, 0.01);
+uniform float speed : hint_range(0.0, 1.0, 0.01);
+uniform float mask : hint_range(0.0, 1.0, 0.01);
+
+vec2 rotate(vec2 p, float angle){
+	return vec2(cos(angle)*p.x-sin(angle)*p.y, sin(angle)*p.x + cos(angle)*p.y);
+}
+
+void fragment(){
+	
+	vec2 uv = UV;
+	float c = length(UV - vec2(0.5));
+	
+	uv = rotate(uv-vec2(0.5),offset * c) + vec2(0.5);
+	uv.x = abs((uv.x-0.5)*2.0);
+	uv.x = fract(uv.x + speed*TIME);
+	
+	vec4 tex_color = texture(TEXTURE,uv);
+	
+	COLOR = tex_color;
+	float mask_color = 1.0-step(mask,c);
+	//COLOR = vec4(mask_color,0.0,0.0,1.0);
+	COLOR.a = COLOR.a * mask_color;
+	
+}"
+
+[sub_resource type="ShaderMaterial" id=4]
+shader = SubResource( 3 )
+shader_param/offset = 14.54
+shader_param/speed = 0.45
+shader_param/mask = 0.46
+
+[node name="PVortex" type="TextureRect"]
+material = SubResource( 2 )
+margin_right = 87.0
+margin_bottom = 80.0
+texture = ExtResource( 1 )
+expand = true
+
+[node name="TextureRect" type="TextureRect" parent="."]
+material = SubResource( 4 )
+margin_left = 123.0
+margin_top = 17.0
+margin_right = 188.0
+margin_bottom = 84.0
+texture = ExtResource( 2 )
+expand = true

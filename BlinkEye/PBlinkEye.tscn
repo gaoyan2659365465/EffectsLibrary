@@ -1,0 +1,143 @@
+[gd_scene load_steps=10 format=2]
+
+[ext_resource path="res://BlinkEye/yanbuff_5.png" type="Texture" id=1]
+[ext_resource path="res://BlinkEye/yanbuff_3.png" type="Texture" id=2]
+[ext_resource path="res://BlinkEye/pBlinkEye.gd" type="Script" id=3]
+[ext_resource path="res://BlinkEye/yanbuff_4.png" type="Texture" id=4]
+[ext_resource path="res://BlinkEye/eye2.gd" type="Script" id=5]
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+
+uniform sampler2D img;
+uniform sampler2D img2;
+// 用于瞳孔的位置
+uniform vec2 offset;
+uniform float size = 1.0;
+// 用于遮罩的缩放
+uniform vec2 offset2;
+uniform float offset3;
+
+void fragment(){
+	//瞳孔
+	vec2 uv = UV-0.5;
+	uv.x = (uv.x + offset.x)*size+0.5;
+	uv.y = (uv.y + offset.y)*size+0.5;
+	vec4 tex_color = texture(img,uv);
+	// 遮罩
+	vec2 uv2 = UV-0.5;
+	uv2.x = uv2.x * offset2.x+0.5;
+	uv2.y = uv2.y * offset2.y+0.5;
+	vec4 tex2_color = texture(TEXTURE,uv2);
+	tex_color.a = tex2_color.a;
+	//底图
+	vec4 tex3_color = texture(TEXTURE,UV);
+	//眼睫毛
+	vec2 uv4 = UV-0.5;
+	uv4.x = uv4.x+0.5;
+	uv4.y = uv4.y * (offset3)+0.5;
+	vec4 tex4_color = texture(img2,uv4);
+	
+	//正常混合
+	vec4 out_color = tex_color * tex_color.a + tex3_color * (1.0-tex_color.a);
+	out_color = tex4_color * tex4_color.a + out_color * (1.0-tex4_color.a);
+	COLOR = out_color;
+}"
+
+[sub_resource type="ShaderMaterial" id=2]
+resource_local_to_scene = true
+shader = SubResource( 1 )
+shader_param/offset = Vector2( -0.0390625, 0.128906 )
+shader_param/size = 1.18663
+shader_param/offset2 = Vector2( 1.148, 2.158 )
+shader_param/offset3 = 0.764
+shader_param/img = ExtResource( 4 )
+shader_param/img2 = ExtResource( 1 )
+
+[sub_resource type="Shader" id=3]
+code = "shader_type canvas_item;
+
+// 背景图
+uniform sampler2D img0;
+// 瞳孔图
+uniform sampler2D img1;
+// 眼睫毛图
+uniform sampler2D img2;
+
+uniform float a;
+uniform float b;
+//瞳孔位置
+uniform vec2 pos;
+//瞳孔缩放
+uniform float size = 1.0;
+
+void fragment(){
+	vec4 tex0_color = texture(img0,UV);
+	
+	
+	// 移动瞳孔图
+	vec2 tex1_uv = UV - 0.5;
+	tex1_uv = (tex1_uv + pos) * size + 0.5;
+	vec4 tex1_color = texture(img1,tex1_uv);
+	
+	// 缩放眼睫毛图
+	vec2 tex2_uv = UV;
+	tex2_uv.y = tex2_uv.y - 0.5;
+	tex2_uv.y = tex2_uv.y * b + 0.5;
+	vec4 tex2_color = texture(img2,tex2_uv);
+	
+	//缩放公式：uv - 0.5  -> 结果 + 0.5
+	
+	// 遮罩层
+	vec2 uv = UV;
+	uv.y = uv.y - 0.5;
+	uv.y = uv.y * a + 0.5;
+	vec4 tex3_color = texture(img0,uv);
+	tex1_color.a = tex3_color.a;
+	
+	// 正常混合公式 A*A.a + B*(1.0-A.a)
+	vec4 out_color = tex1_color * tex1_color.a + tex0_color * (1.0-tex1_color.a);
+	out_color = tex2_color * tex2_color.a + out_color * (1.0-tex2_color.a);
+	COLOR = out_color;
+}"
+
+[sub_resource type="ShaderMaterial" id=4]
+shader = SubResource( 3 )
+shader_param/a = 2.22
+shader_param/b = 0.838
+shader_param/pos = Vector2( 0.011194, -0.0188679 )
+shader_param/size = 1.218
+shader_param/img0 = ExtResource( 2 )
+shader_param/img1 = ExtResource( 4 )
+shader_param/img2 = ExtResource( 1 )
+
+[node name="PBlinkEye" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = -260.0
+margin_top = -260.0
+margin_right = -772.0
+margin_bottom = -348.0
+script = ExtResource( 3 )
+
+[node name="TextureRect" type="TextureRect" parent="."]
+material = SubResource( 2 )
+margin_right = 512.0
+margin_bottom = 512.0
+texture = ExtResource( 2 )
+
+[node name="Position2D" type="Position2D" parent="TextureRect"]
+position = Vector2( 276, 190 )
+
+[node name="Tween" type="Tween" parent="."]
+playback/active = true
+
+[node name="ColorRect" type="ColorRect" parent="."]
+visible = false
+material = SubResource( 4 )
+margin_right = 536.0
+margin_bottom = 530.0
+script = ExtResource( 5 )
+
+[node name="Position2D" type="Position2D" parent="ColorRect"]
+position = Vector2( 262, 275 )

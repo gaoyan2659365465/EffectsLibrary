@@ -1,0 +1,120 @@
+[gd_scene load_steps=9 format=2]
+
+[ext_resource path="res://JFA/jFA.gd" type="Script" id=1]
+[ext_resource path="res://JFA/DreamShaper_v6_A_twisted_gnarled_plant_emerging_from_the_depth_3-removebg-preview.png" type="Texture" id=2]
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+
+uniform sampler2D u_tex;
+uniform float u_offset = 0.0; 
+uniform float u_level = 0.0;
+uniform float u_max_steps = 0.0;
+
+void fragment() 
+{
+	float closest_dist = 9999999.9;
+	vec2 closest_pos = vec2(-1.0,-1.0);
+	
+	// uses Jump Flood Algorithm to do a fast voronoi generation.
+	for(float x = -1.0; x <= 1.0; x += 1.0)
+	{
+		for(float y = -1.0; y <= 1.0; y += 1.0)
+		{
+			vec2 voffset = UV;
+			voffset += vec2(x, y) * SCREEN_PIXEL_SIZE * u_offset;
+
+			vec2 pos = texture(u_tex, voffset).xy;
+			float dist = distance(pos.xy, UV.xy);
+			
+			if(pos.x >= 0.01 && pos.y >= 0.01 && dist < closest_dist)
+			{
+				closest_dist = dist;
+				closest_pos = pos;
+			}
+		}
+	}
+	COLOR = vec4(closest_pos,0.0, 1.0);
+}"
+
+[sub_resource type="ShaderMaterial" id=2]
+shader = SubResource( 1 )
+shader_param/u_offset = 0.0
+shader_param/u_level = 0.0
+shader_param/u_max_steps = 0.0
+
+[sub_resource type="Shader" id=3]
+code = "shader_type canvas_item;
+
+uniform sampler2D u_input_tex;
+
+void fragment() 
+{
+	vec4 scene_col = texture(u_input_tex, UV);
+	if(scene_col.a < 1.0)
+	{
+		COLOR = vec4(0.0, 0.0, 0.0, 1.0);
+	}
+	else
+	{
+		COLOR = vec4(UV.x, UV.y, 0.0, 1.0);
+	}
+}"
+
+[sub_resource type="ShaderMaterial" id=4]
+shader = SubResource( 3 )
+
+[sub_resource type="Shader" id=5]
+code = "shader_type canvas_item;
+
+uniform float offset:hint_range(0.0, 0.2, 0.001) = 0.0;
+uniform float AA:hint_range(0.0, 0.05, 0.001) = 0.0;
+uniform sampler2D sdf_img;
+uniform vec4 color:hint_color;
+
+uniform int debug = 0;
+
+void fragment(){
+	vec2 pos = texture(sdf_img, UV).xy;
+	float dist = distance(pos.xy, UV.xy);
+	float dist2 = smoothstep(dist,dist+AA,offset);
+	
+	vec4 edge_color = vec4(dist2,dist2,dist2,dist2) * color;
+	
+	vec4 tex_color = texture(TEXTURE,UV);
+	//正常混合
+	vec4 out_color = tex_color * tex_color.a + edge_color * (1.0-tex_color.a);
+	if (debug == 0){
+		COLOR = out_color;
+	}
+	else if(debug == 1){
+		COLOR = edge_color;
+	}
+	else if(debug == 2){
+		COLOR = vec4(dist,dist,dist,1.0);
+	}
+	else if(debug == 3){
+		COLOR = vec4(pos,0.0,1.0);
+	}
+	
+}"
+
+[sub_resource type="ShaderMaterial" id=6]
+shader = SubResource( 5 )
+shader_param/offset = 0.032
+shader_param/AA = 0.0
+shader_param/color = Color( 0.411765, 0.498039, 0.0627451, 1 )
+shader_param/debug = 0
+
+[node name="JFA" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 1 )
+voronoi_mat = SubResource( 2 )
+uv_mat = SubResource( 4 )
+image = ExtResource( 2 )
+
+[node name="TextureRect" type="TextureRect" parent="."]
+material = SubResource( 6 )
+margin_right = 393.0
+margin_bottom = 426.0

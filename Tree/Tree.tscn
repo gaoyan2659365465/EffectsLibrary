@@ -1,0 +1,780 @@
+[gd_scene load_steps=31 format=2]
+
+[ext_resource path="res://Tree/image/DreamShaper_v6_A_twisted_gnarled_plant_emerging_from_the_depth_0-removebg-preview.png" type="Texture" id=1]
+[ext_resource path="res://icon.png" type="Texture" id=2]
+[ext_resource path="res://Tree/image/DreamShaper_v6_A_twisted_gnarled_plant_emerging_from_the_depth_3-removebg-preview.png" type="Texture" id=3]
+[ext_resource path="res://Tree/image/DreamShaper_v6_A_twisted_gnarled_plant_emerging_from_the_depth_1-removebg-preview.png" type="Texture" id=4]
+[ext_resource path="res://Tree/image/DreamShaper_v6_A_twisted_gnarled_plant_emerging_from_the_depth_2-removebg-preview.png" type="Texture" id=5]
+[ext_resource path="res://Tree/image/DreamShaper_v6_A_twisted_gnarled_plant_emerging_from_the_depth_0__2_-removebg-preview.png" type="Texture" id=6]
+[ext_resource path="res://Tree/image/DreamShaper_v6_A_twisted_gnarled_plant_emerging_from_the_depth_1__2_-removebg-preview.png" type="Texture" id=7]
+[ext_resource path="res://Tree/image/DreamShaper_v6_A_twisted_gnarled_plant_emerging_from_the_depth_0__1_-removebg-preview.png" type="Texture" id=8]
+[ext_resource path="res://Tree/image/DreamShaper_v6_A_twisted_gnarled_plant_emerging_from_the_depth_1__1_-removebg-preview.png" type="Texture" id=9]
+[ext_resource path="res://Tree/image/DreamShaper_v6_A_twisted_gnarled_plant_emerging_from_the_depth_3__1_-removebg-preview.png" type="Texture" id=10]
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+render_mode blend_mix;
+
+// Wind settings.
+uniform float speed = 1.0;
+uniform float minStrength : hint_range(0.0, 1.0);
+uniform float maxStrength : hint_range(0.0, 1.0);
+uniform float strengthScale = 100.0;
+uniform float interval = 3.5;
+uniform float detail = 1.0;
+uniform float distortion : hint_range(0.0, 1.0);
+uniform float heightOffset = 0.0;
+
+float getWind(vec2 vertex, vec2 uv, float timer){
+	vec2 pos = mix(vec2(1.0), vertex, distortion).xy;
+	float time = timer * speed + pos.x * pos.y;
+	float diff = pow(maxStrength - minStrength, 2.0);
+	float strength = clamp(minStrength + diff + sin(time / interval) * diff, minStrength, maxStrength) * strengthScale;
+	float wind = (sin(time) + cos(time * detail)) * strength * max(0.0, (1.0-uv.y) - heightOffset);
+	
+	return wind;
+	}
+
+void vertex() {
+	VERTEX.x += getWind(VERTEX.xy, UV, TIME);
+}
+"
+
+[sub_resource type="ShaderMaterial" id=2]
+shader = SubResource( 1 )
+shader_param/speed = 1.0
+shader_param/minStrength = 0.138
+shader_param/maxStrength = 0.33
+shader_param/strengthScale = 100.0
+shader_param/interval = 3.5
+shader_param/detail = 1.0
+shader_param/distortion = 0.0
+shader_param/heightOffset = 0.0
+
+[sub_resource type="Shader" id=3]
+code = "shader_type canvas_item;
+
+
+// Camera FOV
+uniform float fov : hint_range(1, 179) = 90;
+uniform bool cull_back = true;
+uniform float y_rot : hint_range(-180, 180) = 0.0;
+uniform float x_rot : hint_range(-180, 180) = 0.0;
+
+
+// At 0, the image retains its size when unrotated.
+// At 1, the image is resized so that it can do a full
+// rotation without clipping inside its rect.
+uniform float inset : hint_range(0, 1) = 0.0;
+// Consider changing this to a uniform and changing it from code
+
+varying flat vec2 o;
+varying vec3 p;
+
+const float PI = 3.14159;
+// Creates rotation matrix
+void vertex(){
+	float sin_b = sin(y_rot / 180.0 * PI);
+	float cos_b = cos(y_rot / 180.0 * PI);
+	float sin_c = sin(x_rot / 180.0 * PI);
+	float cos_c = cos(x_rot / 180.0 * PI);
+	
+	mat3 inv_rot_mat;
+	inv_rot_mat[0][0] = cos_b;
+	inv_rot_mat[0][1] = 0.0;
+	inv_rot_mat[0][2] = -sin_b;
+	
+	inv_rot_mat[1][0] = sin_b * sin_c;
+	inv_rot_mat[1][1] = cos_c;
+	inv_rot_mat[1][2] = cos_b * sin_c;
+	
+	inv_rot_mat[2][0] = sin_b * cos_c;
+	inv_rot_mat[2][1] = -sin_c;
+	inv_rot_mat[2][2] = cos_b * cos_c;
+	
+	
+	float t = tan(fov / 360.0 * PI);
+	p = inv_rot_mat * vec3((UV - 0.5), 0.5 / t);
+	float v = (0.5 / t) + 0.5;
+	p.xy *= v * inv_rot_mat[2].z;
+	o = v * inv_rot_mat[2].xy;
+
+	VERTEX += (UV - 0.5) / TEXTURE_PIXEL_SIZE * t * (1.0 - inset);
+}
+
+
+void fragment(){
+	if (cull_back && p.z <= 0.0) discard;
+	vec2 uv = (p.xy / p.z).xy - o;
+    COLOR = texture(TEXTURE, uv + 0.5);
+	COLOR.a *= step(max(abs(uv.x), abs(uv.y)), 0.5);
+}"
+
+[sub_resource type="ShaderMaterial" id=4]
+shader = SubResource( 3 )
+shader_param/fov = 90.0
+shader_param/cull_back = true
+shader_param/y_rot = 0.0
+shader_param/x_rot = 16.439
+shader_param/inset = 0.0
+
+[sub_resource type="Shader" id=5]
+code = "shader_type canvas_item;
+
+
+// Camera FOV
+uniform float fov : hint_range(1, 179) = 90;
+uniform bool cull_back = true;
+uniform float y_rot : hint_range(-180, 180) = 0.0;
+uniform float x_rot : hint_range(-180, 180) = 0.0;
+
+
+// At 0, the image retains its size when unrotated.
+// At 1, the image is resized so that it can do a full
+// rotation without clipping inside its rect.
+uniform float inset : hint_range(0, 1) = 0.0;
+// Consider changing this to a uniform and changing it from code
+
+varying flat vec2 o;
+varying vec3 p;
+
+const float PI = 3.14159;
+uniform float uv_y : hint_range(0, 1) = 0.0;
+// Creates rotation matrix
+void vertex(){
+	float sin_b = sin(y_rot / 180.0 * PI);
+	float cos_b = cos(y_rot / 180.0 * PI);
+	float sin_c = sin(x_rot / 180.0 * PI);
+	float cos_c = cos(x_rot / 180.0 * PI);
+	
+	mat3 inv_rot_mat;
+	inv_rot_mat[0][0] = cos_b;
+	inv_rot_mat[0][1] = 0.0;
+	inv_rot_mat[0][2] = -sin_b;
+	
+	inv_rot_mat[1][0] = sin_b * sin_c;
+	inv_rot_mat[1][1] = cos_c;
+	inv_rot_mat[1][2] = cos_b * sin_c;
+	
+	inv_rot_mat[2][0] = sin_b * cos_c;
+	inv_rot_mat[2][1] = -sin_c;
+	inv_rot_mat[2][2] = cos_b * cos_c;
+	
+	
+	float t = tan(fov / 360.0 * PI);
+	p = inv_rot_mat * vec3((UV - vec2(0.5, 1.0)), 0.5 / t);
+	float v = (0.5 / t) + 0.5;
+	p.xy *= v * inv_rot_mat[2].z;
+	o = v * inv_rot_mat[2].xy;
+
+	VERTEX += (UV - 0.5) / TEXTURE_PIXEL_SIZE * t * (1.0 - inset);
+}
+
+
+void fragment(){
+	if (cull_back && p.z <= 0.0) discard;
+	vec2 uv = (p.xy / p.z).xy - o;
+	uv.y = uv.y + uv_y;
+    COLOR = texture(TEXTURE, uv + 0.5);
+	COLOR.a *= step(max(abs(uv.x), abs(uv.y)), 0.5);
+}"
+
+[sub_resource type="ShaderMaterial" id=6]
+shader = SubResource( 5 )
+shader_param/fov = 24.421
+shader_param/cull_back = true
+shader_param/y_rot = 0.0
+shader_param/x_rot = -13.654
+shader_param/inset = 0.0
+shader_param/uv_y = 0.539
+
+[sub_resource type="Shader" id=7]
+code = "shader_type canvas_item;
+render_mode skip_vertex_transform; 
+
+
+// 顶点着色器参数
+uniform float move_x: hint_range(0.0, 1.0, 0.01) = 0.0;
+uniform float move_y: hint_range(0.0, 1.0, 0.01) = 0.0;
+
+uniform float rot_x:hint_range(0.0, 2.0, 0.01);
+uniform float rot_y:hint_range(0.0, 2.0, 0.01);
+uniform float rot_z:hint_range(0.0, 2.0, 0.01);
+
+void vertex(){
+
+	mat4 modelMat;
+  
+	mat4 rotation_mat;
+	rotation_mat[0] = vec4(1.0,0.0,0.0,0.0);
+	rotation_mat[1] = vec4(0.0,1.0,0.0,0.0);
+	rotation_mat[2] = vec4(0.0,0.0,1.0,0.0);
+	rotation_mat[3] = vec4(0.0,0.0,0.0,1.0);
+	
+	// 沿X轴旋转
+	mat4 rotation_mat_x;
+	rotation_mat_x[0] = vec4(1.0,0.0,0.0,0.0);
+	rotation_mat_x[1] = vec4(0.0,1.0,0.0,0.0);
+	rotation_mat_x[2] = vec4(0.0,0.0,1.0,0.0);
+	rotation_mat_x[3] = vec4(0.0,0.0,0.0,1.0);
+	rotation_mat_x[1][1] = cos(rot_x);  
+	rotation_mat_x[1][2] = -sin(rot_x);
+	rotation_mat_x[2][1] = sin(rot_x);
+	rotation_mat_x[2][2] = cos(rot_x);
+
+	// 沿Y轴旋转  
+	mat4 rotation_mat_y;
+	rotation_mat_y[0] = vec4(1.0,0.0,0.0,0.0);
+	rotation_mat_y[1] = vec4(0.0,1.0,0.0,0.0);
+	rotation_mat_y[2] = vec4(0.0,0.0,1.0,0.0);
+	rotation_mat_y[3] = vec4(0.0,0.0,0.0,1.0);
+	rotation_mat_y[0][0] = cos(rot_y);
+	rotation_mat_y[0][2] = sin(rot_y);
+	rotation_mat_y[2][0] = -sin(rot_y);
+	rotation_mat_y[2][2] = cos(rot_y);
+
+	// 沿Z轴旋转
+	mat4 rotation_mat_z;
+	rotation_mat_z[0] = vec4(1.0,0.0,0.0,0.0);
+	rotation_mat_z[1] = vec4(0.0,1.0,0.0,0.0);
+	rotation_mat_z[2] = vec4(0.0,0.0,1.0,0.0);
+	rotation_mat_z[3] = vec4(0.0,0.0,0.0,1.0);
+	rotation_mat_z[0][0] = cos(rot_z);
+	rotation_mat_z[0][1] = sin(rot_z);
+	rotation_mat_z[1][0] = -sin(rot_z);
+	rotation_mat_z[1][1] = cos(rot_z);
+	
+
+	// 应用平移
+	modelMat = WORLD_MATRIX * rotation_mat * rotation_mat_x * rotation_mat_y * rotation_mat_z; 
+	modelMat[3].x += move_x * 100.0;
+	modelMat[3].y += move_y * 100.0;
+	
+	vec3 modelPos = (modelMat * vec4(VERTEX, 0.0, 1.0)).xyz;
+	
+	VERTEX.xy = modelPos.xy;
+
+}"
+
+[sub_resource type="ShaderMaterial" id=8]
+shader = SubResource( 7 )
+shader_param/move_x = 0.0
+shader_param/move_y = 0.0
+shader_param/rot_x = 0.0
+shader_param/rot_y = 0.0
+shader_param/rot_z = 0.0
+
+[sub_resource type="Shader" id=9]
+code = "shader_type canvas_item;
+render_mode blend_mix;
+
+// Wind settings.
+uniform float speed = 1.0;
+uniform float minStrength : hint_range(0.0, 1.0);
+uniform float maxStrength : hint_range(0.0, 1.0);
+uniform float strengthScale = 100.0;
+uniform float interval = 3.5;
+uniform float detail = 1.0;
+uniform float distortion : hint_range(0.0, 1.0);
+uniform float heightOffset = 0.0;
+
+float getWind(vec2 vertex, vec2 uv, float timer){
+	vec2 pos = mix(vec2(1.0), vertex, distortion).xy;
+	float time = timer * speed + pos.x * pos.y;
+	float diff = pow(maxStrength - minStrength, 2.0);
+	float strength = clamp(minStrength + diff + sin(time / interval) * diff, minStrength, maxStrength) * strengthScale;
+	float wind = (sin(time) + cos(time * detail)) * strength * max(0.0, (1.0-uv.y) - heightOffset);
+	
+	return wind;
+	}
+
+
+// Camera FOV
+uniform float fov : hint_range(1, 179) = 90;
+uniform bool cull_back = true;
+uniform float y_rot : hint_range(-180, 180) = 0.0;
+uniform float x_rot : hint_range(-180, 180) = 0.0;
+
+
+// At 0, the image retains its size when unrotated.
+// At 1, the image is resized so that it can do a full
+// rotation without clipping inside its rect.
+uniform float inset : hint_range(0, 1) = 0.0;
+// Consider changing this to a uniform and changing it from code
+
+varying flat vec2 o;
+varying vec3 p;
+
+const float PI = 3.14159;
+
+uniform float uv_y : hint_range(0, 1) = 0.0;
+// Creates rotation matrix
+void vertex(){
+	float sin_b = sin(y_rot / 180.0 * PI);
+	float cos_b = cos(y_rot / 180.0 * PI);
+	float sin_c = sin(x_rot / 180.0 * PI);
+	float cos_c = cos(x_rot / 180.0 * PI);
+	
+	mat3 inv_rot_mat;
+	inv_rot_mat[0][0] = cos_b;
+	inv_rot_mat[0][1] = 0.0;
+	inv_rot_mat[0][2] = -sin_b;
+	
+	inv_rot_mat[1][0] = sin_b * sin_c;
+	inv_rot_mat[1][1] = cos_c;
+	inv_rot_mat[1][2] = cos_b * sin_c;
+	
+	inv_rot_mat[2][0] = sin_b * cos_c;
+	inv_rot_mat[2][1] = -sin_c;
+	inv_rot_mat[2][2] = cos_b * cos_c;
+	
+	
+	float t = tan(fov / 360.0 * PI);
+	//p = inv_rot_mat * vec3((UV - 0.5), 0.5 / t);
+	p = inv_rot_mat * vec3((UV - vec2(0.5, 1.0)), 0.5 / t);
+	float v = (0.5 / t) + 0.5;
+	p.xy *= v * inv_rot_mat[2].z;
+	o = v * inv_rot_mat[2].xy;
+
+	VERTEX += (UV - 0.5) / TEXTURE_PIXEL_SIZE * t * (1.0 - inset);
+	
+	//wind
+	VERTEX.x += getWind(VERTEX.xy, UV, TIME);
+}
+
+
+void fragment(){
+	if (cull_back && p.z <= 0.0) discard;
+	vec2 uv = (p.xy / p.z).xy - o;
+	uv.y = uv.y + uv_y;
+    COLOR = texture(TEXTURE, uv + 0.5);
+	COLOR.a *= step(max(abs(uv.x), abs(uv.y)), 0.5);
+}"
+
+[sub_resource type="ShaderMaterial" id=10]
+shader = SubResource( 9 )
+shader_param/speed = 1.0
+shader_param/minStrength = 0.171
+shader_param/maxStrength = 0.368
+shader_param/strengthScale = 100.0
+shader_param/interval = 3.5
+shader_param/detail = 1.0
+shader_param/distortion = null
+shader_param/heightOffset = 0.0
+shader_param/fov = 30.0
+shader_param/cull_back = true
+shader_param/y_rot = 0.0
+shader_param/x_rot = 0.0
+shader_param/inset = 0.0
+shader_param/uv_y = 0.619
+
+[sub_resource type="ShaderMaterial" id=13]
+shader = SubResource( 9 )
+shader_param/speed = 1.0
+shader_param/minStrength = 0.12
+shader_param/maxStrength = 0.309
+shader_param/strengthScale = 100.0
+shader_param/interval = 3.5
+shader_param/detail = 1.0
+shader_param/distortion = null
+shader_param/heightOffset = 0.0
+shader_param/fov = 30.0
+shader_param/cull_back = true
+shader_param/y_rot = 0.0
+shader_param/x_rot = 0.0
+shader_param/inset = 0.0
+shader_param/uv_y = 0.619
+
+[sub_resource type="ShaderMaterial" id=14]
+shader = SubResource( 9 )
+shader_param/speed = 1.0
+shader_param/minStrength = 0.252
+shader_param/maxStrength = 0.25
+shader_param/strengthScale = 100.0
+shader_param/interval = 3.5
+shader_param/detail = 1.0
+shader_param/distortion = null
+shader_param/heightOffset = 0.0
+shader_param/fov = 30.0
+shader_param/cull_back = true
+shader_param/y_rot = 0.0
+shader_param/x_rot = 0.0
+shader_param/inset = 0.0
+shader_param/uv_y = 0.619
+
+[sub_resource type="ShaderMaterial" id=15]
+shader = SubResource( 9 )
+shader_param/speed = 1.0
+shader_param/minStrength = 0.267
+shader_param/maxStrength = 0.471
+shader_param/strengthScale = 100.0
+shader_param/interval = 3.5
+shader_param/detail = 1.0
+shader_param/distortion = null
+shader_param/heightOffset = 0.0
+shader_param/fov = 30.0
+shader_param/cull_back = true
+shader_param/y_rot = 0.0
+shader_param/x_rot = 0.0
+shader_param/inset = 0.0
+shader_param/uv_y = 0.619
+
+[sub_resource type="ShaderMaterial" id=16]
+shader = SubResource( 9 )
+shader_param/speed = 1.0
+shader_param/minStrength = 0.171
+shader_param/maxStrength = 0.356
+shader_param/strengthScale = 100.0
+shader_param/interval = 3.5
+shader_param/detail = 1.0
+shader_param/distortion = null
+shader_param/heightOffset = 0.0
+shader_param/fov = 30.0
+shader_param/cull_back = true
+shader_param/y_rot = 0.0
+shader_param/x_rot = 0.0
+shader_param/inset = 0.0
+shader_param/uv_y = 0.619
+
+[sub_resource type="ShaderMaterial" id=17]
+shader = SubResource( 9 )
+shader_param/speed = 1.0
+shader_param/minStrength = 0.2
+shader_param/maxStrength = 0.28
+shader_param/strengthScale = 100.0
+shader_param/interval = 3.5
+shader_param/detail = 1.0
+shader_param/distortion = null
+shader_param/heightOffset = 0.0
+shader_param/fov = 30.0
+shader_param/cull_back = true
+shader_param/y_rot = 0.0
+shader_param/x_rot = 0.0
+shader_param/inset = 0.0
+shader_param/uv_y = 0.619
+
+[sub_resource type="ShaderMaterial" id=18]
+shader = SubResource( 9 )
+shader_param/speed = 1.0
+shader_param/minStrength = 0.245
+shader_param/maxStrength = 0.456
+shader_param/strengthScale = 100.0
+shader_param/interval = 3.5
+shader_param/detail = 1.0
+shader_param/distortion = null
+shader_param/heightOffset = 0.0
+shader_param/fov = 30.0
+shader_param/cull_back = true
+shader_param/y_rot = 0.0
+shader_param/x_rot = 0.0
+shader_param/inset = 0.0
+shader_param/uv_y = 0.619
+
+[sub_resource type="ShaderMaterial" id=19]
+shader = SubResource( 9 )
+shader_param/speed = 1.0
+shader_param/minStrength = 0.171
+shader_param/maxStrength = 0.317
+shader_param/strengthScale = 100.0
+shader_param/interval = 3.5
+shader_param/detail = 1.0
+shader_param/distortion = null
+shader_param/heightOffset = 0.0
+shader_param/fov = 30.0
+shader_param/cull_back = true
+shader_param/y_rot = 0.0
+shader_param/x_rot = 0.0
+shader_param/inset = 0.0
+shader_param/uv_y = 0.619
+
+[sub_resource type="ShaderMaterial" id=20]
+shader = SubResource( 9 )
+shader_param/speed = 1.0
+shader_param/minStrength = 0.208
+shader_param/maxStrength = 0.368
+shader_param/strengthScale = 100.0
+shader_param/interval = 3.5
+shader_param/detail = 1.0
+shader_param/distortion = null
+shader_param/heightOffset = 0.0
+shader_param/fov = 30.0
+shader_param/cull_back = true
+shader_param/y_rot = 0.0
+shader_param/x_rot = 0.0
+shader_param/inset = 0.0
+shader_param/uv_y = 0.619
+
+[sub_resource type="Animation" id=11]
+length = 0.001
+tracks/0/type = "bezier"
+tracks/0/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth0-removebg-preview:material:shader_param/x_rot")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"points": PoolRealArray( 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0 )
+}
+tracks/1/type = "bezier"
+tracks/1/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth01-removebg-preview:material:shader_param/x_rot")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"points": PoolRealArray( 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0 )
+}
+tracks/2/type = "bezier"
+tracks/2/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth02-removebg-preview:material:shader_param/x_rot")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"points": PoolRealArray( 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0 )
+}
+tracks/3/type = "bezier"
+tracks/3/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth1-removebg-preview:material:shader_param/x_rot")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/keys = {
+"points": PoolRealArray( 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0 )
+}
+tracks/4/type = "bezier"
+tracks/4/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth11-removebg-preview:material:shader_param/x_rot")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/keys = {
+"points": PoolRealArray( 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0 )
+}
+tracks/5/type = "bezier"
+tracks/5/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth12-removebg-preview:material:shader_param/x_rot")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/keys = {
+"points": PoolRealArray( 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0 )
+}
+tracks/6/type = "bezier"
+tracks/6/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth2-removebg-preview:material:shader_param/x_rot")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/keys = {
+"points": PoolRealArray( 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0 )
+}
+tracks/7/type = "bezier"
+tracks/7/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth3-removebg-preview:material:shader_param/x_rot")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/keys = {
+"points": PoolRealArray( 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0 )
+}
+tracks/8/type = "bezier"
+tracks/8/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth31-removebg-preview:material:shader_param/x_rot")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/keys = {
+"points": PoolRealArray( 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0 )
+}
+
+[sub_resource type="Animation" id=12]
+resource_name = "tree_start"
+length = 6.0
+tracks/0/type = "bezier"
+tracks/0/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth0-removebg-preview:material:shader_param/x_rot")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"points": PoolRealArray( 180, -0.25, 0, 0.25, 0, -50, -0.25, 0, 0.25, 0, 10.294, -0.25, 0, 0.25, 0, -26.765, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0, 1, 1.8, 2.5, 3.2 )
+}
+tracks/1/type = "bezier"
+tracks/1/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth01-removebg-preview:material:shader_param/x_rot")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"points": PoolRealArray( 180, -0.25, 0, 0.25, 0, -50, -0.25, 0, 0.25, 0, 10.294, -0.25, 0, 0.25, 0, -26.765, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0.4, 1.4, 2.2, 2.9, 3.6 )
+}
+tracks/2/type = "bezier"
+tracks/2/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth02-removebg-preview:material:shader_param/x_rot")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"points": PoolRealArray( 180, -0.25, 0, 0.25, 0, -50, -0.25, 0, 0.25, 0, 10.294, -0.25, 0, 0.25, 0, -26.765, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 0.8, 1.8, 2.6, 3.3, 4 )
+}
+tracks/3/type = "bezier"
+tracks/3/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth1-removebg-preview:material:shader_param/x_rot")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/keys = {
+"points": PoolRealArray( 180, -0.25, 0, 0.25, 0, -50, -0.25, 0, 0.25, 0, 10.294, -0.25, 0, 0.25, 0, -26.765, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 1.2, 2.2, 3, 3.7, 4.4 )
+}
+tracks/4/type = "bezier"
+tracks/4/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth11-removebg-preview:material:shader_param/x_rot")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/keys = {
+"points": PoolRealArray( 180, -0.25, 0, 0.25, 0, -50, -0.25, 0, 0.25, 0, 10.294, -0.25, 0, 0.25, 0, -26.765, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 1.6, 2.6, 3.4, 4.1, 4.8 )
+}
+tracks/5/type = "bezier"
+tracks/5/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth12-removebg-preview:material:shader_param/x_rot")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/keys = {
+"points": PoolRealArray( 180, -0.25, 0, 0.25, 0, -50, -0.25, 0, 0.25, 0, 10.294, -0.25, 0, 0.25, 0, -26.765, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 2, 3, 3.8, 4.5, 5.2 )
+}
+tracks/6/type = "bezier"
+tracks/6/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth2-removebg-preview:material:shader_param/x_rot")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/keys = {
+"points": PoolRealArray( 180, -0.25, 0, 0.25, 0, -50, -0.25, 0, 0.25, 0, 10.294, -0.25, 0, 0.25, 0, -26.765, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 2.3, 3.3, 4.1, 4.8, 5.5 )
+}
+tracks/7/type = "bezier"
+tracks/7/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth3-removebg-preview:material:shader_param/x_rot")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/keys = {
+"points": PoolRealArray( 180, -0.25, 0, 0.25, 0, -50, -0.25, 0, 0.25, 0, 10.294, -0.25, 0, 0.25, 0, -26.765, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 2.5, 3.5, 4.3, 5.1, 5.8 )
+}
+tracks/8/type = "bezier"
+tracks/8/path = NodePath("DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth31-removebg-preview:material:shader_param/x_rot")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/keys = {
+"points": PoolRealArray( 180, -0.25, 0, 0.25, 0, -50, -0.25, 0, 0.25, 0, 10.294, -0.25, 0, 0.25, 0, -26.765, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.25, 0 ),
+"times": PoolRealArray( 2.7, 3.7, 4.5, 5.3, 6 )
+}
+
+[node name="Tree" type="Node2D"]
+
+[node name="TextureRect" type="TextureRect" parent="."]
+material = SubResource( 2 )
+margin_left = 2.0
+margin_top = 1.0
+margin_right = 103.0
+margin_bottom = 147.0
+texture = ExtResource( 1 )
+expand = true
+
+[node name="TextureRect2" type="TextureRect" parent="."]
+material = SubResource( 4 )
+margin_left = 146.0
+margin_top = 48.0
+margin_right = 210.0
+margin_bottom = 112.0
+texture = ExtResource( 2 )
+
+[node name="TextureRect3" type="TextureRect" parent="."]
+material = SubResource( 6 )
+margin_left = 237.0
+margin_top = 48.0
+margin_right = 301.0
+margin_bottom = 112.0
+texture = ExtResource( 2 )
+
+[node name="TextureRect4" type="TextureRect" parent="."]
+material = SubResource( 8 )
+margin_left = 331.0
+margin_top = 48.0
+margin_right = 395.0
+margin_bottom = 112.0
+rect_pivot_offset = Vector2( 32, 32 )
+texture = ExtResource( 2 )
+
+[node name="anim" type="Node2D" parent="."]
+position = Vector2( 250, -54 )
+
+[node name="DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth0-removebg-preview" type="Sprite" parent="anim"]
+material = SubResource( 10 )
+position = Vector2( 456, 305 )
+texture = ExtResource( 1 )
+
+[node name="DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth01-removebg-preview" type="Sprite" parent="anim"]
+material = SubResource( 13 )
+position = Vector2( -771, -142 )
+texture = ExtResource( 8 )
+
+[node name="DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth02-removebg-preview" type="Sprite" parent="anim"]
+material = SubResource( 14 )
+position = Vector2( 792, -180 )
+texture = ExtResource( 6 )
+
+[node name="DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth1-removebg-preview" type="Sprite" parent="anim"]
+material = SubResource( 15 )
+position = Vector2( -740, 805 )
+texture = ExtResource( 4 )
+
+[node name="DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth11-removebg-preview" type="Sprite" parent="anim"]
+material = SubResource( 16 )
+position = Vector2( 351, 957 )
+texture = ExtResource( 9 )
+
+[node name="DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth12-removebg-preview" type="Sprite" parent="anim"]
+material = SubResource( 17 )
+position = Vector2( 966, 989 )
+texture = ExtResource( 7 )
+
+[node name="DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth2-removebg-preview" type="Sprite" parent="anim"]
+material = SubResource( 18 )
+position = Vector2( 992, 392 )
+texture = ExtResource( 5 )
+
+[node name="DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth3-removebg-preview" type="Sprite" parent="anim"]
+material = SubResource( 19 )
+position = Vector2( -34, 613 )
+texture = ExtResource( 3 )
+
+[node name="DreamShaperV6ATwistedGnarledPlantEmergingFromTheDepth31-removebg-preview" type="Sprite" parent="anim"]
+material = SubResource( 20 )
+position = Vector2( -448, 396 )
+texture = ExtResource( 10 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="anim"]
+anims/RESET = SubResource( 11 )
+anims/tree_start = SubResource( 12 )

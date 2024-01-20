@@ -1,0 +1,56 @@
+[gd_scene load_steps=4 format=2]
+
+[ext_resource path="res://AntLineBox/antLineBox.gd" type="Script" id=1]
+
+[sub_resource type="Shader" id=1]
+code = "shader_type canvas_item;
+//绘制蚂蚁线框
+uniform vec2 pos;
+uniform vec2 size;
+uniform float edge_size = 1.0;
+uniform vec2 edge_interval = vec2(10.0,5.0);//边缘间隔
+
+uniform float speed = 10.0;
+
+varying vec2 world_pos;
+
+void vertex(){
+	world_pos = (WORLD_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy;
+}
+
+void fragment(){
+	COLOR.a = 0.0;
+	//FRAGCOORD左下角坐标world_pos左上角坐标
+	if(	world_pos.x > pos.x && world_pos.x < pos.x + edge_size ||
+		world_pos.x > pos.x + size.x - edge_size && world_pos.x < pos.x + size.x){
+		if(mod(world_pos.y+speed*TIME,edge_interval.x)>edge_interval.y){
+			COLOR.a = 1.0;
+		}
+	}
+	if(	world_pos.y > pos.y && world_pos.y < pos.y + edge_size ||
+		world_pos.y > pos.y + size.y - edge_size && world_pos.y < pos.y + size.y){
+		if(mod(world_pos.x-speed*TIME,edge_interval.x)>edge_interval.y){
+			COLOR.a = 1.0;
+		}
+	}
+}"
+
+[sub_resource type="ShaderMaterial" id=2]
+shader = SubResource( 1 )
+shader_param/pos = null
+shader_param/size = null
+shader_param/edge_size = 1.0
+shader_param/edge_interval = Vector2( 10, 5 )
+shader_param/speed = 10.0
+
+[node name="AntLineBox" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 1
+script = ExtResource( 1 )
+
+[node name="ColorRect" type="ColorRect" parent="."]
+material = SubResource( 2 )
+mouse_filter = 2
+
+[connection signal="gui_input" from="." to="." method="_on_AntLineBox_gui_input"]

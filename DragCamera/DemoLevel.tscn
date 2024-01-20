@@ -1,0 +1,44 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://DragCamera/DragCamera.gd" type="Script" id=1]
+[ext_resource path="res://icon.png" type="Texture" id=2]
+[ext_resource path="res://DragCamera/DemoLevel.gd" type="Script" id=3]
+[ext_resource path="res://DragCamera/ImageSize.gd" type="Script" id=4]
+
+[node name="DemoLevel" type="Node2D"]
+script = ExtResource( 3 )
+
+[node name="Icon" type="Sprite" parent="."]
+position = Vector2( 211, 261 )
+texture = ExtResource( 2 )
+
+[node name="Icon2" type="Sprite" parent="."]
+modulate = Color( 1, 0.0117647, 0.0117647, 1 )
+position = Vector2( 733, 230 )
+texture = ExtResource( 2 )
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Control" type="Control" parent="CanvasLayer"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="ColorRect" type="ColorRect" parent="CanvasLayer"]
+margin_left = 667.0
+margin_top = 156.0
+margin_right = 799.0
+margin_bottom = 176.0
+color = Color( 1, 0, 0, 1 )
+
+[node name="ImageSize" type="Control" parent="CanvasLayer"]
+margin_left = 324.0
+margin_top = 220.0
+margin_right = 525.0
+margin_bottom = 400.0
+script = ExtResource( 4 )
+
+[node name="DragCamera2D" type="Camera2D" parent="."]
+anchor_mode = 0
+current = true
+script = ExtResource( 1 )
+widget = NodePath("../CanvasLayer/Control")

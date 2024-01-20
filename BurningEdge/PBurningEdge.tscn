@@ -1,0 +1,114 @@
+[gd_scene load_steps=11 format=2]
+
+[ext_resource path="res://BurningEdge/DreamShaper_v6_A_twisted_gnarled_plant_emerging_from_the_depth_1__1_-removebg-preview.png" type="Texture" id=1]
+[ext_resource path="res://BurningEdge/xiaochou.png" type="Texture" id=2]
+
+[sub_resource type="Shader" id=11]
+code = "shader_type canvas_item;
+
+uniform sampler2D noise_texture;
+
+uniform float noise_speed : hint_range(0.0, 1.0, 0.01) = 1.0;
+uniform float noise_size : hint_range(0.0, 1.0, 0.01) = 1.0;
+uniform vec4 edge_color : hint_color;
+
+void fragment(){
+	vec4 base_color = texture(TEXTURE, UV);
+	
+	vec2 noise_uv = UV;
+	noise_uv.y = noise_uv.y + TIME * noise_speed;
+	vec4 noise_color = texture(noise_texture,noise_uv);
+	float noise = pow(noise_color.r,5.0)*noise_size;
+	
+	vec2 uv = UV;
+	vec2 uv_1 = clamp(uv + noise,vec2(0.0),vec2(1.0));
+	vec2 uv_2 = clamp(uv - noise,vec2(0.0),vec2(1.0));
+	//提取透明通道
+	float tex_color_a = texture(TEXTURE,uv_1).a;
+	tex_color_a += texture(TEXTURE,uv_2).a;
+	tex_color_a = clamp(tex_color_a,0.0,1.0);
+	
+	// 边缘颜色
+	vec4 _edge_color = edge_color;
+	_edge_color.a = edge_color.a * tex_color_a;
+	
+	vec4 outline_color = mix(base_color, _edge_color, clamp(tex_color_a - base_color.a,0.0,1.0));
+	COLOR = outline_color;
+}"
+
+[sub_resource type="OpenSimplexNoise" id=13]
+
+[sub_resource type="NoiseTexture" id=14]
+noise = SubResource( 13 )
+
+[sub_resource type="ShaderMaterial" id=12]
+shader = SubResource( 11 )
+shader_param/noise_speed = 0.23
+shader_param/noise_size = 0.21
+shader_param/edge_color = Color( 0.815686, 0.752941, 0.0588235, 1 )
+shader_param/noise_texture = SubResource( 14 )
+
+[sub_resource type="Shader" id=15]
+code = "shader_type canvas_item;
+
+uniform sampler2D noise_tex;
+
+uniform float edge_size :hint_range(0.0, 1.0, 0.01) = 1.0;
+uniform float noise_size : hint_range(0.0, 10.0, 0.01);
+uniform float noise_size_2 : hint_range(0.0, 0.1, 0.01);
+uniform float speed : hint_range(0.0, 1.0, 0.01) = 1.0;
+
+uniform vec4 edge_color:hint_color;
+
+void fragment(){
+	vec2 noise_uv = UV;
+	noise_uv.y = noise_uv.y + TIME * speed;
+	noise_uv = noise_uv * 0.6;
+	vec4 noise_color = texture(noise_tex,noise_uv);
+	float noise = clamp(pow(noise_color.r,noise_size),0.0,1.0) * noise_size_2;
+	
+	//边缘图像
+	vec2 uv = UV;
+	uv = (uv-vec2(0.5))*edge_size + vec2(0.5);
+	vec2 uv_1 = uv - noise;
+	vec2 uv_2 = uv + noise;
+	vec4 tex_color = texture(TEXTURE,uv_1);
+	tex_color += texture(TEXTURE,uv_2);
+	tex_color = clamp(tex_color,vec4(0.0),vec4(1.0));
+	//原本图像
+	vec2 uv2 = UV;
+	vec4 tex_color_2 = texture(TEXTURE,uv2);
+	float edge = clamp(tex_color.a - tex_color_2.a,0.0,1.0);
+	//COLOR = vec4(edge,0.0,0.0,1.0);
+	vec4 _egde_color = edge_color;
+	_egde_color.a = _egde_color.a * tex_color.a;
+	COLOR = mix(tex_color_2,_egde_color,edge);
+}"
+
+[sub_resource type="OpenSimplexNoise" id=17]
+
+[sub_resource type="NoiseTexture" id=18]
+noise = SubResource( 17 )
+
+[sub_resource type="ShaderMaterial" id=16]
+shader = SubResource( 15 )
+shader_param/edge_size = 0.97
+shader_param/noise_size = 3.89
+shader_param/noise_size_2 = 0.1
+shader_param/speed = 0.55
+shader_param/edge_color = Color( 0.164706, 0.403922, 0.686275, 0.454902 )
+shader_param/noise_tex = SubResource( 18 )
+
+[node name="PBurningEdge" type="TextureRect"]
+material = SubResource( 12 )
+margin_right = 512.0
+margin_bottom = 512.0
+texture = ExtResource( 2 )
+
+[node name="TextureRect" type="TextureRect" parent="."]
+material = SubResource( 16 )
+margin_left = 524.0
+margin_top = 28.0
+margin_right = 1036.0
+margin_bottom = 540.0
+texture = ExtResource( 1 )

@@ -1,0 +1,55 @@
+[gd_scene load_steps=8 format=2]
+
+[sub_resource type="Shader" id=81]
+code = "shader_type canvas_item;
+
+uniform float size:hint_range(0.0,1.0);
+
+
+void fragment(){
+	float a = length(UV-0.5);
+	float b = 1.- smoothstep(0.0,size,a);
+	COLOR = vec4(COLOR.r,COLOR.g,COLOR.b,b*COLOR.a);
+}"
+
+[sub_resource type="ShaderMaterial" id=77]
+shader = SubResource( 81 )
+shader_param/size = 0.467
+
+[sub_resource type="Gradient" id=78]
+offsets = PoolRealArray( 0, 0.285714, 0.6875, 1 )
+colors = PoolColorArray( 0.937255, 0.0196078, 0.945098, 0, 0.855469, 0.840849, 0.481201, 1, 0.976563, 0.693619, 0.205994, 1, 0.937255, 0.0196078, 0.945098, 0 )
+
+[sub_resource type="GradientTexture" id=82]
+gradient = SubResource( 78 )
+
+[sub_resource type="Curve" id=79]
+_data = [ Vector2( 0, 0 ), 0.0, 0.0, 0, 0, Vector2( 0.489879, 0.381818 ), 0.0, 0.0, 0, 0, Vector2( 1, 0 ), 0.0, 0.0, 0, 0 ]
+
+[sub_resource type="CurveTexture" id=83]
+curve = SubResource( 79 )
+
+[sub_resource type="ParticlesMaterial" id=80]
+emission_shape = 2
+emission_box_extents = Vector3( 500, 500, 1 )
+flag_disable_z = true
+direction = Vector3( 0, 0, 0 )
+gravity = Vector3( 0, 0, 0 )
+initial_velocity = 59.88
+initial_velocity_random = 0.73
+angular_velocity = 720.0
+angular_velocity_random = 1.0
+orbit_velocity = 0.0
+orbit_velocity_random = 0.0
+scale = 36.93
+scale_curve = SubResource( 83 )
+color = Color( 1, 1, 1, 0.317647 )
+color_ramp = SubResource( 82 )
+
+[node name="PDust" type="Particles2D"]
+material = SubResource( 77 )
+position = Vector2( 236, 312 )
+scale = Vector2( 0.7, 0.7 )
+amount = 50
+lifetime = 5.0
+process_material = SubResource( 80 )
